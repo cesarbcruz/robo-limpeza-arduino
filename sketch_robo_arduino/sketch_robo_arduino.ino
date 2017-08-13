@@ -9,6 +9,10 @@ AF_DCMotor motor_traseiro_esquerdo(3);
 AF_DCMotor motor_traseiro_direiro(4);
 const int sensor_direito = 30;
 const int sensor_esquerdo = 31;
+String ultima_acao = "";
+long inicio_acao = 0;
+long tempo_maximo_acao = 10000;
+long tempo_minimo_acao = 2000;
 
  
 void setup()
@@ -29,26 +33,57 @@ void loop()
 {   
   boolean virarParaEsquerda = digitalRead(sensor_esquerdo) == HIGH;
   boolean virarParaDireita = digitalRead(sensor_direito) == HIGH;
+  String nova_acao = "";
 
   if(virarParaEsquerda && virarParaDireita){
-    Serial.println("Para atras depois para direita");
+    nova_acao = "Para atras depois para direita";
     ligarMotoresTraseiro(BACKWARD);
     delay(1000);
     virarDireita();
-    delay(1000);    
+    delay(1000);
   }else if(virarParaDireita){
-    Serial.println("Virar Para direita");   
+    nova_acao =  "Virar Para direita";   
     virarDireita();
-    delay(1000);
+    if(millis() - inicio_acao < tempo_minimo_acao){
+      Serial.println("tempo extra para rotacao para direita");
+      delay(2000);      
+    }else{
+      delay(1000);
+    }
   }else if(virarParaEsquerda){
-    Serial.println("Virar Para esquerda");
+    nova_acao = "Virar Para esquerda";
     virarEsquerda();
-    delay(1000);
+    if(millis() - inicio_acao < tempo_minimo_acao){
+      Serial.println("tempo extra para rotacao para esquerda");
+      delay(2000);      
+    }else{
+      delay(1000); 
+    }
   }else{
+    nova_acao = "Para frente";
     ligarMotoresTraseiro(FORWARD);  
-    Serial.println("Para frente");
     delay(10);
   }
+  
+  if(nova_acao == ultima_acao){
+
+    if(millis() - inicio_acao > tempo_maximo_acao){
+      ultima_acao = "Seguranca: Ir para atras depois para esquerda";
+      desligarMotoresTraseiro();
+      delay(1000);
+      ligarMotoresTraseiro(BACKWARD);
+      delay(1000);
+      virarEsquerda();
+      delay(2000);
+      inicio_acao = millis();
+    }
+    
+  }else{
+    ultima_acao = nova_acao;
+    inicio_acao = millis();
+  }
+  
+  Serial.println(ultima_acao);
 }
 
 void ligarMotoresTraseiro(int direcao){
